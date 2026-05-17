@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(copy .env.example .env)",
+      "Bash(npm run *)",
+      "Bash(npx prisma *)",
+      "PowerShell(cd \"c:\\\\Users\\\\user\\\\OneDrive\\\\Documentos\\\\TCC-Sebastião\\\\apps\\\\api\"; $env:DATABASE_URL = \"postgresql://postgres:senha123@localhost:5432/academia_db\"; npx prisma migrate dev --name add_personal_trainer 2>&1)",
+      "PowerShell(Get-Process -Name node -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "Bash(npx --prefix apps/web next build)"
+    ]
+  }
+}

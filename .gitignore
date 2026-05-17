@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+.expo/
+*.env
+.env.local
+!*.env.example
+!*.env.local.example
+prisma/migrations/
