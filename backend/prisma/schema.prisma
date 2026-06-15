@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Perfil {
+  ADMINISTRADOR
+  RECEPCIONISTA
+  INSTRUTOR
+  ALUNO
+}
+
+enum StatusMatricula {
+  ATIVO
+  INATIVO
+  CANCELADO
+}
+
+enum StatusCobranca {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+enum StatusFicha {
+  ATIVA
+  ARQUIVADA
+}
+
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  CARTAO
+}
+
+model Usuario {
+  id           Int          @id @default(autoincrement())
+  nome         String
+  email        String       @unique
+  senhaHash    String
+  perfil       Perfil
+  ativo        Boolean      @default(true)
+  criadoEm    DateTime     @default(now())
+  aluno        Aluno?
+  funcionario  Funcionario?
+}
+
+model Aluno {
+  id          Int          @id @default(autoincrement())
+  usuarioId   Int          @unique
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
+  cpf         String       @unique
+  nascimento  DateTime
+  telefone    String
+  endereco    String?
+  foto        String?
+  obsSaude    String?
+  matriculas  Matricula[]
+  fichas      FichaTreino[]
+  checkins    Checkin[]
+}
+
+model Funcionario {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int      @unique
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  cpf       String   @unique
+  cargo     Perfil
+  cref      String?
+  fichas    FichaTreino[]
+}
+
+model Plano {
+  id            Int         @id @default(autoincrement())
+  nome          String
+  duracaoMeses  Int
+  valorMensal   Decimal     @db.Decimal(10, 2)
+  descricao     String?
+  ativo         Boolean     @default(true)
+  matriculas    Matricula[]
+}
+
+model Matricula {
+  id               Int              @id @default(autoincrement())
+  alunoId          Int
+  aluno            Aluno            @relation(fields: [alunoId], references: [id])
+  planoId          Int
+  plano            Plano            @relation(fields: [planoId], references: [id])
+  valorContratado  Decimal          @db.Decimal(10, 2)
+  dataInicio       DateTime
+  dataFim          DateTime
+  diaVencimento    Int
+  status           StatusMatricula  @default(ATIVO)
+  motivoCancelamento String?
+  canceladoPorId   Int?
+  canceladoEm      DateTime?
+  cobranças        Cobranca[]
+}
+
+model Cobranca {
+  id             Int            @id @default(autoincrement())
+  matriculaId    Int
+  matricula      Matricula      @relation(fields: [matriculaId], references: [id])
+  competencia    DateTime
+  valor          Decimal        @db.Decimal(10, 2)
+  vencimento     DateTime
+  status         StatusCobranca @default(PENDENTE)
+  dataPagamento  DateTime?
+  formaPagamento FormaPagamento?
+  recebidoPorId  Int?
+  motivoEstorno  String?
+}
+
+model Exercicio {
+  id             Int              @id @default(autoincrement())
+  nome           String
+  grupoMuscular  String
+  exerciciosFicha ExercicioFicha[]
+}
+
+model FichaTreino {
+  id          Int              @id @default(autoincrement())
+  alunoId     Int
+  aluno       Aluno            @relation(fields: [alunoId], references: [id])
+  instrutorId Int
+  instrutor   Funcionario      @relation(fields: [instrutorId], references: [id])
+  validade    DateTime
+  status      StatusFicha      @default(ATIVA)
+  criadoEm   DateTime         @default(now())
+  exercicios  ExercicioFicha[]
+}
+
+model ExercicioFicha {
+  id          Int         @id @default(autoincrement())
+  fichaId     Int
+  ficha       FichaTreino @relation(fields: [fichaId], references: [id])
+  divisao     String
+  exercicioId Int
+  exercicio   Exercicio   @relation(fields: [exercicioId], references: [id])
+  series      Int
+  repeticoes  String
+  carga       String?
+  descanso    String?
+  observacao  String?
+  ordem       Int         @default(0)
+}
+
+model Checkin {
+  id           Int      @id @default(autoincrement())
+  alunoId      Int
+  aluno        Aluno    @relation(fields: [alunoId], references: [id])
+  dataHora     DateTime @default(now())
+  liberadoPorId Int?
+  liberadoManual Boolean @default(false)
+}
