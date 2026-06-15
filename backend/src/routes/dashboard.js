@@ -29,14 +29,14 @@ router.get('/', autenticar, exigirPerfil('ADMINISTRADOR', 'RECEPCIONISTA'), asyn
     prisma.matricula.count({
       where: {
         status: 'ATIVO',
-        cobranças: { none: { status: 'VENCIDO' } },
+        cobrancas: { none: { status: 'VENCIDO' } },
       },
     }),
     // Alunos com ao menos 1 cobrança vencida
     prisma.matricula.count({
       where: {
         status: 'ATIVO',
-        cobranças: { some: { status: 'VENCIDO' } },
+        cobrancas: { some: { status: 'VENCIDO' } },
       },
     }),
     prisma.checkin.count({ where: { dataHora: { gte: inicioHoje, lte: fimHoje } } }),
