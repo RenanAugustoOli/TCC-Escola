@@ -16,7 +16,7 @@ import { dashboardRoutes } from './routes/dashboard'
 const app = Fastify({ logger: true })
 
 app.register(cors, {
-  origin: true,
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : true,
   credentials: true,
 })
 
