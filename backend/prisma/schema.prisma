@@ -99,7 +99,7 @@ model Matricula {
   motivoCancelamento String?
   canceladoPorId   Int?
   canceladoEm      DateTime?
-  cobranças        Cobranca[]
+  cobrancas        Cobranca[]
 }
 
 model Cobranca {
