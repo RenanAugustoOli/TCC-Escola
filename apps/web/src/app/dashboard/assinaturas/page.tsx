@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Subscription } from '@academia/shared'
-import { Search, RefreshCw, XCircle } from 'lucide-react'
+import { Search, RefreshCw, XCircle, Snowflake, Play } from 'lucide-react'
 
 const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'Ativa', INACTIVE: 'Inativa', CANCELLED: 'Cancelada', OVERDUE: 'Inadimplente',
+  ACTIVE: 'Ativa', INACTIVE: 'Inativa', CANCELLED: 'Cancelada', OVERDUE: 'Inadimplente', FROZEN: 'Congelada',
 }
 const STATUS_BADGE: Record<string, string> = {
-  ACTIVE: 'badge-active', INACTIVE: 'badge-inactive', CANCELLED: 'badge-cancelled', OVERDUE: 'badge-overdue',
+  ACTIVE: 'badge-active', INACTIVE: 'badge-inactive', CANCELLED: 'badge-cancelled', OVERDUE: 'badge-overdue', FROZEN: 'badge-inactive',
 }
 
 export default function AssinaturasPage() {
@@ -36,6 +36,16 @@ export default function AssinaturasPage() {
 
   const renew = useMutation({
     mutationFn: (id: string) => api.put(`/subscriptions/${id}/renew`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
+  })
+
+  const freeze = useMutation({
+    mutationFn: (id: string) => api.put(`/subscriptions/${id}/freeze`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
+  })
+
+  const unfreeze = useMutation({
+    mutationFn: (id: string) => api.put(`/subscriptions/${id}/unfreeze`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] }),
   })
 
@@ -66,6 +76,7 @@ export default function AssinaturasPage() {
           <option value="OVERDUE">Inadimplentes</option>
           <option value="CANCELLED">Canceladas</option>
           <option value="INACTIVE">Inativas</option>
+          <option value="FROZEN">Congeladas</option>
         </select>
       </div>
 
@@ -109,6 +120,24 @@ export default function AssinaturasPage() {
                         <RefreshCw size={12} />
                         Renovar
                       </button>
+                      {s.status === 'ACTIVE' && (
+                        <button
+                          onClick={() => freeze.mutate(s.id)}
+                          className="text-xs py-1.5 px-3 text-sky-600 hover:bg-sky-50 rounded-lg flex items-center gap-1 font-medium transition-colors"
+                        >
+                          <Snowflake size={12} />
+                          Congelar
+                        </button>
+                      )}
+                      {s.status === 'FROZEN' && (
+                        <button
+                          onClick={() => unfreeze.mutate(s.id)}
+                          className="text-xs py-1.5 px-3 text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-1 font-medium transition-colors"
+                        >
+                          <Play size={12} />
+                          Retomar
+                        </button>
+                      )}
                       {s.status === 'ACTIVE' && (
                         <button
                           onClick={() => cancel.mutate(s.id)}

@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { canAccessDashboardPath } from '@/lib/permissions'
 import {
   LayoutDashboard, Users, CreditCard, Dumbbell,
-  FileText, LogOut, Settings, ClipboardList, ChevronRight,
+  FileText, LogOut, Settings, ClipboardList, ChevronRight, Bell, CalendarDays,
 } from 'lucide-react'
 
 const navItems = [
@@ -13,14 +14,17 @@ const navItems = [
   { label: 'Alunos', href: '/dashboard/alunos', icon: Users },
   { label: 'Planos', href: '/dashboard/planos', icon: ClipboardList },
   { label: 'Assinaturas', href: '/dashboard/assinaturas', icon: CreditCard },
+  { label: 'Aulas', href: '/dashboard/aulas', icon: CalendarDays },
   { label: 'Treinos', href: '/dashboard/treinos', icon: Dumbbell },
   { label: 'Pagamentos', href: '/dashboard/pagamentos', icon: FileText },
+  { label: 'Notificações', href: '/dashboard/notificacoes', icon: Bell },
   { label: 'Configurações', href: '/dashboard/configuracoes', icon: Settings },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+  const visibleNavItems = user ? navItems.filter((item) => canAccessDashboardPath(user.role, item.href)) : navItems
 
   return (
     <aside className="w-64 flex flex-col h-screen fixed left-0 top-0 bg-[#0d1b2e] border-r border-white/5">
@@ -43,7 +47,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         <p className="text-[10px] text-slate-600 font-semibold uppercase tracking-wider px-3 mb-2">Menu</p>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon
           const active = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
           return (

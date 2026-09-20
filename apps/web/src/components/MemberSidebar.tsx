@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { ClipboardList, CreditCard, Dumbbell, FileText, LogOut, Settings, Home, ChevronRight } from 'lucide-react'
+import { ClipboardList, CreditCard, Dumbbell, FileText, LogOut, Settings, Home, ChevronRight, CalendarDays } from 'lucide-react'
 
 const navItems = [
   { label: 'Início', href: '/membro', icon: Home, exact: true },
   { label: 'Minha Assinatura', href: '/membro/assinatura', icon: CreditCard },
   { label: 'Planos', href: '/membro/planos', icon: ClipboardList },
   { label: 'Treinos', href: '/membro/treinos', icon: Dumbbell },
+  { label: 'Aulas', href: '/membro/aulas', icon: CalendarDays },
   { label: 'Pagamentos', href: '/membro/pagamentos', icon: FileText },
   { label: 'Configurações', href: '/membro/configuracoes', icon: Settings },
 ]

@@ -1,13 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma'
 import { requireAdmin } from '../middleware/auth'
+import { calculateChurnRate, calculateMRR } from '../lib/metrics'
 
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get('/stats', { preHandler: requireAdmin }, async () => {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
 
     const [
       totalMembers,
@@ -15,7 +14,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       overdueSubscriptions,
       monthlyRevenue,
       newMembersThisMonth,
-      newMembersLastMonth,
+      cancelledThisMonth,
+      activeAtStartOfMonth,
+      activeSubscriptionsForMRR,
     ] = await Promise.all([
       prisma.user.count({ where: { role: 'MEMBER' } }),
       prisma.subscription.count({ where: { status: 'ACTIVE' } }),
@@ -25,12 +26,21 @@ export async function dashboardRoutes(app: FastifyInstance) {
         _sum: { amount: true },
       }),
       prisma.user.count({ where: { role: 'MEMBER', createdAt: { gte: startOfMonth } } }),
-      prisma.user.count({ where: { role: 'MEMBER', createdAt: { gte: startOfLastMonth, lte: endOfLastMonth } } }),
+      prisma.subscription.count({ where: { status: 'CANCELLED', updatedAt: { gte: startOfMonth } } }),
+      prisma.subscription.count({
+        where: { status: { in: ['ACTIVE', 'OVERDUE', 'CANCELLED'] }, createdAt: { lt: startOfMonth } },
+      }),
+      prisma.subscription.findMany({
+        where: { status: 'ACTIVE' },
+        select: { plan: { select: { price: true, durationDays: true } } },
+      }),
     ])
 
-    const churnRate = newMembersLastMonth > 0
-      ? ((newMembersLastMonth - newMembersThisMonth) / newMembersLastMonth) * 100
-      : 0
+    const churnRate = calculateChurnRate({
+      cancelledInPeriod: cancelledThisMonth,
+      activeAtStartOfPeriod: activeAtStartOfMonth,
+    })
+    const mrr = calculateMRR(activeSubscriptionsForMRR)
 
     return {
       totalMembers,
@@ -38,7 +48,9 @@ export async function dashboardRoutes(app: FastifyInstance) {
       overduePayments: overdueSubscriptions,
       monthlyRevenue: monthlyRevenue._sum.amount ?? 0,
       newMembersThisMonth,
-      churnRate: Math.max(0, churnRate),
+      churnRate,
+      retentionRate: Math.max(0, 100 - churnRate),
+      mrr,
     }
   })
 

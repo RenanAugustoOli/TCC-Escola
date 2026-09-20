@@ -12,6 +12,7 @@ interface AuthContextData {
   isAdmin: boolean
   isTrainer: boolean
   isMember: boolean
+  isReceptionist: boolean
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData)
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: user?.role === 'ADMIN',
       isTrainer: user?.role === 'PERSONAL_TRAINER',
       isMember: user?.role === 'MEMBER',
+      isReceptionist: user?.role === 'RECEPTIONIST',
     }}>
       {children}
     </AuthContext.Provider>

@@ -20,7 +20,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const user = await login(email, password)
-      if (user.role === 'ADMIN') router.push('/dashboard')
+      if (user.role === 'ADMIN' || user.role === 'RECEPTIONIST') router.push('/dashboard')
       else if (user.role === 'PERSONAL_TRAINER') router.push('/trainer')
       else router.push('/membro')
     } catch {

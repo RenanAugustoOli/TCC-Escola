@@ -11,6 +11,7 @@ enum UserRole {
   ADMIN
   PERSONAL_TRAINER
   MEMBER
+  RECEPTIONIST
 }
 
 enum SubscriptionStatus {
@@ -18,6 +19,7 @@ enum SubscriptionStatus {
   INACTIVE
   CANCELLED
   OVERDUE
+  FROZEN
 }
 
 enum PaymentStatus {
@@ -39,6 +41,17 @@ enum WorkoutDifficulty {
   ADVANCED
 }
 
+enum NotificationType {
+  PAYMENT_DUE_SOON
+  PAYMENT_OVERDUE
+  PAYMENT_GENERATED
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -57,6 +70,11 @@ model User {
   personalWorkoutsAsStudent PersonalWorkout[] @relation("StudentPersonalWorkouts")
   personalWorkoutsAsTrainer PersonalWorkout[] @relation("TrainerPersonalWorkouts")
   personalWorkoutLogs   PersonalWorkoutLog[]
+  notifications         Notification[]
+  physicalAssessments   PhysicalAssessment[]
+  taughtClasses         ClassSchedule[]      @relation("ClassInstructor")
+  classBookings         ClassBooking[]       @relation("ClassBookingStudent")
+  classBookingsCreated  ClassBooking[]       @relation("ClassBookingCreator")
 }
 
 model Plan {
@@ -81,6 +99,7 @@ model Subscription {
   status    SubscriptionStatus @default(ACTIVE)
   startDate DateTime
   endDate   DateTime
+  frozenAt  DateTime?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
@@ -153,6 +172,69 @@ model WorkoutLog {
 
   user    User    @relation(fields: [userId], references: [id])
   workout Workout @relation(fields: [workoutId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  channel   String           @default("EMAIL")
+  message   String
+  status    String           @default("SIMULATED")
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PhysicalAssessment {
+  id               String   @id @default(cuid())
+  userId           String
+  weightKg         Float
+  heightCm         Float
+  bodyFatPercent   Float?
+  waistCm          Float?
+  hipCm            Float?
+  chestCm          Float?
+  armCm            Float?
+  thighCm          Float?
+  notes            String?
+  assessedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ClassSchedule {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  instructorId    String
+  weekday         Int
+  startTime       String
+  durationMinutes Int
+  capacity        Int
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  instructor User           @relation("ClassInstructor", fields: [instructorId], references: [id])
+  bookings   ClassBooking[]
+}
+
+model ClassBooking {
+  id         String        @id @default(cuid())
+  scheduleId String
+  userId     String
+  bookedById String
+  classDate  String
+  status     BookingStatus @default(BOOKED)
+  createdAt  DateTime      @default(now())
+
+  schedule ClassSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  user     User          @relation("ClassBookingStudent", fields: [userId], references: [id])
+  bookedBy User          @relation("ClassBookingCreator", fields: [bookedById], references: [id])
+
+  @@unique([scheduleId, userId, classDate])
 }
 
 // --- Personal Trainer ---

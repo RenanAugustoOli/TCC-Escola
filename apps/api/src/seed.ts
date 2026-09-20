@@ -33,6 +33,20 @@ async function main() {
     },
   })
 
+  // Recepção
+  const receptionistHash = await bcrypt.hash('recepcao123', 10)
+  await prisma.user.upsert({
+    where: { email: 'ana@gymtech.com' },
+    update: {},
+    create: {
+      name: 'Ana Souza',
+      email: 'ana@gymtech.com',
+      passwordHash: receptionistHash,
+      phone: '(11) 97777-2222',
+      role: 'RECEPTIONIST',
+    },
+  })
+
   // Planos
   await prisma.plan.upsert({
     where: { id: 'plan-basico' },
@@ -206,11 +220,27 @@ async function main() {
     },
   })
 
+  // Turmas de exemplo
+  const classSchedules = [
+    { id: 'class-spinning-ter', name: 'Spinning', weekday: 2, startTime: '07:00', durationMinutes: 45, capacity: 15 },
+    { id: 'class-spinning-qui', name: 'Spinning', weekday: 4, startTime: '07:00', durationMinutes: 45, capacity: 15 },
+    { id: 'class-funcional-seg', name: 'Funcional', weekday: 1, startTime: '18:30', durationMinutes: 50, capacity: 12 },
+  ]
+
+  for (const schedule of classSchedules) {
+    await prisma.classSchedule.upsert({
+      where: { id: schedule.id },
+      update: {},
+      create: { ...schedule, instructorId: trainer.id },
+    })
+  }
+
   console.log('\nBanco populado com sucesso! ✅')
   console.log('─────────────────────────────')
-  console.log('Admin:    admin@gymtech.com    / admin123')
-  console.log('Trainer:  carlos@gymtech.com   / trainer123')
-  console.log('Membro:   joao@exemplo.com     / membro123')
+  console.log('Admin:      admin@gymtech.com    / admin123')
+  console.log('Trainer:    carlos@gymtech.com   / trainer123')
+  console.log('Recepção:   ana@gymtech.com      / recepcao123')
+  console.log('Membro:     joao@exemplo.com     / membro123')
   console.log('─────────────────────────────')
 }
 

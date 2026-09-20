@@ -5,10 +5,12 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@academia/shared": "*",
+    "@hookform/resolvers": "^3.6.0",
     "@tanstack/react-query": "^5.45.0",
     "axios": "^1.7.2",
     "lucide-react": "^0.395.0",
@@ -17,8 +19,7 @@
     "react-dom": "18.2.0",
     "react-hook-form": "^7.52.1",
     "recharts": "^2.12.7",
-    "zod": "^3.23.8",
-    "@hookform/resolvers": "^3.6.0"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
@@ -27,6 +28,7 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.11"
   }
 }

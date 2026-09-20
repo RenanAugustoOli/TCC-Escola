@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
-import { authenticate, requireAdmin } from '../middleware/auth'
+import { authenticate, requireStaff } from '../middleware/auth'
 
 export async function paymentsRoutes(app: FastifyInstance) {
-  app.get('/', { preHandler: requireAdmin }, async (req) => {
+  app.get('/', { preHandler: requireStaff }, async (req) => {
     const { page = '1', perPage = '20', status } = req.query as Record<string, string>
 
     const where = status ? { status: status as 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED' } : {}
@@ -84,7 +84,7 @@ export async function paymentsRoutes(app: FastifyInstance) {
     return reply.status(200).send({ received: true })
   })
 
-  app.put('/:id/confirm', { preHandler: requireAdmin }, async (req, reply) => {
+  app.put('/:id/confirm', { preHandler: requireStaff }, async (req, reply) => {
     const { id } = req.params as { id: string }
 
     const payment = await prisma.payment.update({

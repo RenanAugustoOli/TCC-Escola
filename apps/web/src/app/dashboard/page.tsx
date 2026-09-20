@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { DashboardStats } from '@academia/shared'
 import { StatCard } from '@/components/StatCard'
-import { Users, TrendingUp, AlertCircle, DollarSign } from 'lucide-react'
+import { Users, TrendingUp, AlertCircle, DollarSign, Repeat, ShieldCheck } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -37,7 +37,7 @@ export default function DashboardPage() {
         <p className="page-subtitle">Visão geral da academia em tempo real</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-3 gap-5 mb-8">
         <StatCard
           title="Total de Alunos"
           value={stats?.totalMembers ?? '—'}
@@ -62,6 +62,20 @@ export default function DashboardPage() {
           value={stats?.overduePayments ?? '—'}
           icon={<AlertCircle size={18} />}
           color="red"
+        />
+        <StatCard
+          title="MRR"
+          value={stats ? fmt(stats.mrr) : '—'}
+          subtitle="Receita recorrente mensal"
+          icon={<Repeat size={18} />}
+          color="blue"
+        />
+        <StatCard
+          title="Taxa de Retenção"
+          value={stats ? `${stats.retentionRate.toFixed(1)}%` : '—'}
+          subtitle={`Churn de ${stats?.churnRate.toFixed(1) ?? 0}% este mês`}
+          icon={<ShieldCheck size={18} />}
+          color="green"
         />
       </div>
 

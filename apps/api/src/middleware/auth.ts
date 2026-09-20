@@ -31,3 +31,15 @@ export async function requireTrainer(req: FastifyRequest, reply: FastifyReply) {
     return reply.status(403).send({ message: 'Acesso negado — requer personal trainer' })
   }
 }
+
+export async function requireStaff(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    await req.jwtVerify()
+  } catch {
+    return reply.status(401).send({ message: 'Não autorizado' })
+  }
+  const user = req.user as { role: string }
+  if (user.role !== 'ADMIN' && user.role !== 'RECEPTIONIST') {
+    return reply.status(403).send({ message: 'Acesso negado — requer recepção ou admin' })
+  }
+}

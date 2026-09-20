@@ -1,8 +1,8 @@
 // --- Enums ---
 
-export type UserRole = 'ADMIN' | 'PERSONAL_TRAINER' | 'MEMBER'
+export type UserRole = 'ADMIN' | 'PERSONAL_TRAINER' | 'MEMBER' | 'RECEPTIONIST'
 
-export type SubscriptionStatus = 'ACTIVE' | 'INACTIVE' | 'CANCELLED' | 'OVERDUE'
+export type SubscriptionStatus = 'ACTIVE' | 'INACTIVE' | 'CANCELLED' | 'OVERDUE' | 'FROZEN'
 
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
 
@@ -20,6 +20,55 @@ export interface User {
   role: UserRole
   avatarUrl?: string
   createdAt: string
+}
+
+// --- Physical Assessment ---
+
+export interface PhysicalAssessment {
+  id: string
+  userId: string
+  weightKg: number
+  heightCm: number
+  bodyFatPercent?: number
+  waistCm?: number
+  hipCm?: number
+  chestCm?: number
+  armCm?: number
+  thighCm?: number
+  notes?: string
+  assessedAt: string
+  createdAt: string
+}
+
+// --- Classes ---
+
+export interface ClassSchedule {
+  id: string
+  name: string
+  description: string | null
+  instructorId: string
+  instructor?: { id: string; name: string }
+  weekday: number
+  startTime: string
+  durationMinutes: number
+  capacity: number
+  isActive: boolean
+}
+
+export interface AgendaItem {
+  scheduleId: string
+  name: string
+  description: string | null
+  instructor: { id: string; name: string }
+  date: string
+  startsAt: string
+  durationMinutes: number
+  capacity: number
+  bookedCount: number
+  spotsLeft: number
+  bookedByMe: boolean
+  myBookingId: string | null
+  bookings?: { id: string; userId: string; userName: string }[]
 }
 
 // --- Plan ---
@@ -148,4 +197,6 @@ export interface DashboardStats {
   overduePayments: number
   newMembersThisMonth: number
   churnRate: number
+  retentionRate: number
+  mrr: number
 }

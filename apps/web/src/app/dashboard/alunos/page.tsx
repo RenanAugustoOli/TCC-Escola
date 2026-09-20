@@ -11,11 +11,13 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Admin',
   PERSONAL_TRAINER: 'Personal',
   MEMBER: 'Aluno',
+  RECEPTIONIST: 'Recepção',
 }
 const ROLE_BADGE: Record<string, string> = {
   ADMIN: 'badge-active',
   PERSONAL_TRAINER: 'badge-trainer',
   MEMBER: 'badge-inactive',
+  RECEPTIONIST: 'badge-trainer',
 }
 
 export default function AlunosPage() {

@@ -1,11 +1,12 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { addDays } from '../lib/dateUtils'
+import { extendEndDateByFrozenDays } from '../lib/subscriptionFreeze'
 import { prisma } from '../lib/prisma'
-import { authenticate, requireAdmin } from '../middleware/auth'
+import { authenticate, requireStaff } from '../middleware/auth'
 
 export async function subscriptionsRoutes(app: FastifyInstance) {
-  app.get('/', { preHandler: requireAdmin }, async (req) => {
+  app.get('/', { preHandler: requireStaff }, async (req) => {
     const { page = '1', perPage = '20', status, search } = req.query as Record<string, string>
 
     const where: Record<string, unknown> = {}
@@ -43,7 +44,7 @@ export async function subscriptionsRoutes(app: FastifyInstance) {
     return subscription
   })
 
-  app.post('/', { preHandler: requireAdmin }, async (req, reply) => {
+  app.post('/', { preHandler: requireStaff }, async (req, reply) => {
     const schema = z.object({
       userId: z.string(),
       planId: z.string(),
@@ -74,7 +75,45 @@ export async function subscriptionsRoutes(app: FastifyInstance) {
     return subscription
   })
 
-  app.put('/:id/renew', { preHandler: requireAdmin }, async (req, reply) => {
+  app.put('/:id/freeze', { preHandler: requireStaff }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+
+    const current = await prisma.subscription.findUniqueOrThrow({ where: { id } })
+    if (current.status !== 'ACTIVE') {
+      return reply.status(400).send({ message: 'Só é possível congelar uma assinatura ativa' })
+    }
+
+    const subscription = await prisma.subscription.update({
+      where: { id },
+      data: { status: 'FROZEN', frozenAt: new Date() },
+    })
+
+    return subscription
+  })
+
+  app.put('/:id/unfreeze', { preHandler: requireStaff }, async (req, reply) => {
+    const { id } = req.params as { id: string }
+
+    const current = await prisma.subscription.findUniqueOrThrow({ where: { id } })
+    if (current.status !== 'FROZEN' || !current.frozenAt) {
+      return reply.status(400).send({ message: 'Essa assinatura não está congelada' })
+    }
+
+    const newEndDate = extendEndDateByFrozenDays({
+      endDate: current.endDate,
+      frozenAt: current.frozenAt,
+      now: new Date(),
+    })
+
+    const subscription = await prisma.subscription.update({
+      where: { id },
+      data: { status: 'ACTIVE', endDate: newEndDate, frozenAt: null },
+    })
+
+    return subscription
+  })
+
+  app.put('/:id/renew', { preHandler: requireStaff }, async (req, reply) => {
     const { id } = req.params as { id: string }
 
     const current = await prisma.subscription.findUniqueOrThrow({

@@ -1,8 +1,10 @@
+import './lib/timezone'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
+import { ZodError } from 'zod'
 
 import { personalWorkoutsRoutes } from './routes/personalWorkouts'
 import { authRoutes } from './routes/auth'
@@ -12,6 +14,9 @@ import { subscriptionsRoutes } from './routes/subscriptions'
 import { paymentsRoutes } from './routes/payments'
 import { workoutsRoutes } from './routes/workouts'
 import { dashboardRoutes } from './routes/dashboard'
+import { billingRoutes } from './routes/billing'
+import { classesRoutes } from './routes/classes'
+import { runBillingCycle } from './lib/billing'
 
 const app = Fastify({ logger: true })
 
@@ -45,6 +50,20 @@ app.register(paymentsRoutes, { prefix: '/payments' })
 app.register(workoutsRoutes, { prefix: '/workouts' })
 app.register(dashboardRoutes, { prefix: '/dashboard' })
 app.register(personalWorkoutsRoutes, { prefix: '/personal-workouts' })
+app.register(billingRoutes, { prefix: '/billing' })
+app.register(classesRoutes, { prefix: '/classes' })
+
+app.setErrorHandler((error, request, reply) => {
+  if (error instanceof ZodError) {
+    const messages = error.issues.map((issue) => {
+      const path = issue.path.length > 0 ? issue.path.join('.') : 'root'
+      return `${path}: ${issue.message}`
+    })
+    return reply.status(400).send({ message: `Dados inválidos: ${messages.join('; ')}` })
+  }
+  request.log.error(error)
+  reply.send(error)
+})
 
 app.get('/health', async () => ({ status: 'ok' }))
 
@@ -53,6 +72,11 @@ const start = async () => {
   await app.listen({ port, host: '0.0.0.0' })
   console.log(`API rodando em http://localhost:${port}`)
   console.log(`Documentação em http://localhost:${port}/docs`)
+
+  const ONE_HOUR_MS = 60 * 60 * 1000
+  setInterval(() => {
+    runBillingCycle().catch((err) => app.log.error(err, 'Falha ao rodar o ciclo de cobrança'))
+  }, ONE_HOUR_MS)
 }
 
 start().catch((err) => {

@@ -1,20 +1,23 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { Sidebar } from '@/components/Sidebar'
+import { canAccessDashboardPath } from '@/lib/permissions'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (loading) return
     if (!user) { router.push('/login'); return }
     if (user.role === 'MEMBER') { router.push('/membro'); return }
     if (user.role === 'PERSONAL_TRAINER') { router.push('/trainer'); return }
-  }, [user, loading, router])
+    if (!canAccessDashboardPath(user.role, pathname)) { router.push('/dashboard/alunos'); return }
+  }, [user, loading, router, pathname])
 
   if (loading) {
     return (
@@ -29,7 +32,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  if (!user || user.role !== 'ADMIN') return null
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'RECEPTIONIST')) return null
+  if (!canAccessDashboardPath(user.role, pathname)) return null
 
   return (
     <div className="flex min-h-screen bg-gray-50">
