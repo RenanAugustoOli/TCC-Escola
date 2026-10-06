@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
+import { startOfLocalDay } from '../lib/dateUtils'
 import { authenticate, requireAdmin } from '../middleware/auth'
 
 export async function workoutsRoutes(app: FastifyInstance) {
@@ -93,13 +94,42 @@ export async function workoutsRoutes(app: FastifyInstance) {
   app.post('/:id/complete', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const jwtUser = req.user as { id: string }
-    const { notes } = req.body as { notes?: string }
+    const { notes } = (req.body ?? {}) as { notes?: string }
+
+    const alreadyToday = await prisma.workoutLog.findFirst({
+      where: { userId: jwtUser.id, workoutId: id, completedAt: { gte: startOfLocalDay(new Date()) } },
+    })
+    if (alreadyToday) {
+      return reply.status(409).send({ message: 'Você já registrou esse treino hoje' })
+    }
 
     const log = await prisma.workoutLog.create({
       data: { userId: jwtUser.id, workoutId: id, notes },
     })
 
     return reply.status(201).send(log)
+  })
+
+  // Treinos que o aluno já concluiu hoje (plano e personal)
+  app.get('/my/today', { preHandler: authenticate }, async (req) => {
+    const jwtUser = req.user as { id: string }
+    const since = startOfLocalDay(new Date())
+
+    const [planLogs, personalLogs] = await Promise.all([
+      prisma.workoutLog.findMany({
+        where: { userId: jwtUser.id, completedAt: { gte: since } },
+        select: { workoutId: true },
+      }),
+      prisma.personalWorkoutLog.findMany({
+        where: { studentId: jwtUser.id, completedAt: { gte: since } },
+        select: { personalWorkoutId: true },
+      }),
+    ])
+
+    return {
+      workoutIds: [...new Set(planLogs.map((l) => l.workoutId))],
+      personalWorkoutIds: [...new Set(personalLogs.map((l) => l.personalWorkoutId))],
+    }
   })
 
   app.get('/my/history', { preHandler: authenticate }, async (req) => {

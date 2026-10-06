@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
+import { startOfLocalDay } from '../lib/dateUtils'
 import { authenticate, requireTrainer } from '../middleware/auth'
 
 export async function personalWorkoutsRoutes(app: FastifyInstance) {
@@ -152,7 +153,17 @@ export async function personalWorkoutsRoutes(app: FastifyInstance) {
   app.post('/:id/complete', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const { id: studentId } = req.user as { id: string }
-    const { notes } = req.body as { notes?: string }
+    const { notes } = (req.body ?? {}) as { notes?: string }
+
+    const workout = await prisma.personalWorkout.findFirst({ where: { id, studentId } })
+    if (!workout) return reply.status(404).send({ message: 'Treino não encontrado' })
+
+    const alreadyToday = await prisma.personalWorkoutLog.findFirst({
+      where: { personalWorkoutId: id, studentId, completedAt: { gte: startOfLocalDay(new Date()) } },
+    })
+    if (alreadyToday) {
+      return reply.status(409).send({ message: 'Você já registrou esse treino hoje' })
+    }
 
     const log = await prisma.personalWorkoutLog.create({
       data: { personalWorkoutId: id, studentId, notes },

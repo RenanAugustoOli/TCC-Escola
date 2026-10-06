@@ -12,7 +12,19 @@ const DIFFICULTY_STYLE = {
   ADVANCED:     'bg-red-50 text-red-700 border border-red-200',
 }
 
-function WorkoutCard({ workout, onComplete }: { workout: Workout; onComplete: () => void }) {
+function CompleteButton({ done, onClick }: { done: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={done}
+      className={`btn-primary w-full text-sm ${done ? 'opacity-60 cursor-not-allowed' : ''}`}
+    >
+      <CheckCircle size={15} /> {done ? 'Concluído hoje' : 'Concluir Treino'}
+    </button>
+  )
+}
+
+function WorkoutCard({ workout, done, onComplete }: { workout: Workout; done: boolean; onComplete: () => void }) {
   return (
     <div className="card flex flex-col">
       <div className="flex items-start justify-between mb-3 gap-3">
@@ -34,14 +46,12 @@ function WorkoutCard({ workout, onComplete }: { workout: Workout; onComplete: ()
           </div>
         ))}
       </div>
-      <button onClick={onComplete} className="btn-primary w-full text-sm">
-        <CheckCircle size={15} /> Concluir Treino
-      </button>
+      <CompleteButton done={done} onClick={onComplete} />
     </div>
   )
 }
 
-function PersonalWorkoutCard({ pw, onComplete }: { pw: PersonalWorkout; onComplete: () => void }) {
+function PersonalWorkoutCard({ pw, done, onComplete }: { pw: PersonalWorkout; done: boolean; onComplete: () => void }) {
   return (
     <div className="card flex flex-col relative" style={{ borderColor: '#0047AB', borderWidth: 2 }}>
       <div className="absolute -top-3 left-4">
@@ -62,9 +72,7 @@ function PersonalWorkoutCard({ pw, onComplete }: { pw: PersonalWorkout; onComple
           </div>
         ))}
       </div>
-      <button onClick={onComplete} className="btn-primary w-full text-sm">
-        <CheckCircle size={15} /> Concluir Treino
-      </button>
+      <CompleteButton done={done} onClick={onComplete} />
     </div>
   )
 }
@@ -82,14 +90,30 @@ export default function TreinosMembroPage() {
     queryFn: () => api.get('/personal-workouts/my').then((r) => r.data),
   })
 
+  const { data: today } = useQuery<{ workoutIds: string[]; personalWorkoutIds: string[] }>({
+    queryKey: ['workouts-today'],
+    queryFn: () => api.get('/workouts/my/today').then((r) => r.data),
+  })
+
+  const refreshToday = () => {
+    queryClient.invalidateQueries({ queryKey: ['workouts-today'] })
+    queryClient.invalidateQueries({ queryKey: ['workout-history'] })
+  }
+
   const completeWorkout = useMutation({
     mutationFn: (id: string) => api.post(`/workouts/${id}/complete`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-history'] }),
+    onSettled: refreshToday,
   })
 
   const completePersonal = useMutation({
     mutationFn: (id: string) => api.post(`/personal-workouts/${id}/complete`),
+    onSettled: refreshToday,
   })
+
+  const completeError = completeWorkout.error ?? completePersonal.error
+  const completeErrorMessage =
+    (completeError as { response?: { data?: { message?: string } } } | null)?.response?.data?.message ??
+    (completeError ? 'Não foi possível registrar o treino. Tente novamente.' : null)
 
   const hasPersonal = personalWorkouts.length > 0
   const hasPlan = planWorkouts.length > 0
@@ -117,12 +141,23 @@ export default function TreinosMembroPage() {
         </p>
       </div>
 
+      {completeErrorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
+          {completeErrorMessage}
+        </div>
+      )}
+
       {hasPersonal && (
         <div className="mb-8">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Treinos Personalizados</h2>
           <div className="grid grid-cols-2 gap-5">
             {personalWorkouts.map((pw) => (
-              <PersonalWorkoutCard key={pw.id} pw={pw} onComplete={() => completePersonal.mutate(pw.id)} />
+              <PersonalWorkoutCard
+                key={pw.id}
+                pw={pw}
+                done={today?.personalWorkoutIds.includes(pw.id) ?? false}
+                onComplete={() => completePersonal.mutate(pw.id)}
+              />
             ))}
           </div>
         </div>
@@ -133,7 +168,12 @@ export default function TreinosMembroPage() {
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Treinos do Plano</h2>
           <div className="grid grid-cols-2 gap-5">
             {planWorkouts.map((w) => (
-              <WorkoutCard key={w.id} workout={w} onComplete={() => completeWorkout.mutate(w.id)} />
+              <WorkoutCard
+                key={w.id}
+                workout={w}
+                done={today?.workoutIds.includes(w.id) ?? false}
+                onComplete={() => completeWorkout.mutate(w.id)}
+              />
             ))}
           </div>
         </div>

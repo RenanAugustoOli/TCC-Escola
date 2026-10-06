@@ -54,8 +54,12 @@ npm run dev              # Inicia em http://localhost:3001
 ```
 
 **Credenciais do seed:**
-- Admin: `admin@academia.com` / `admin123`
+- Admin: `admin@gymtech.com` / `admin123`
+- Personal: `carlos@gymtech.com` / `trainer123`
+- Recepção: `ana@gymtech.com` / `recepcao123`
 - Membro: `joao@exemplo.com` / `membro123`
+
+Para publicar (Vercel + Railway + Supabase), veja [docs/DEPLOY.md](docs/DEPLOY.md).
 
 Documentação da API: http://localhost:3001/docs
 
