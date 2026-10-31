@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "buildCommand": "npm install --include=dev && npx prisma generate --schema=prisma/schema-vercel.prisma && DATABASE_URL=\"file:$PWD/prisma/demo.db\" npx prisma db push --schema=prisma/schema-vercel.prisma --force-reset --skip-generate && DATABASE_URL=\"file:$PWD/prisma/demo.db\" npx tsx src/seed-vercel.ts",
+  "installCommand": "npm install --include=dev",
+  "framework": null,
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "prisma/demo.db"
+    }
+  }
+}
