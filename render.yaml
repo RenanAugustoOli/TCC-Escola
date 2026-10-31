@@ -1,23 +1,28 @@
 services:
   - type: web
-    name: academia-api
-    runtime: node
-    rootDir: apps/api
+    name: gymtech-api
+    env: node
+    region: oregon
     plan: free
+    rootDir: apps/api
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npx prisma migrate deploy && npm run start
+    healthCheckPath: /health
     envVars:
-      - key: NODE_VERSION
-        value: 20
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: gymtech-db
+          property: connectionString
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
+      - key: TZ
+        value: America/Sao_Paulo
       - key: CORS_ORIGIN
-        sync: false
-      - key: MP_ACCESS_TOKEN
-        sync: false
-      - key: MP_WEBHOOK_SECRET
-        sync: false
-      - key: APP_URL
-        sync: false
+        value: https://web-mauve-nine-74.vercel.app
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: gymtech-db
+    plan: free
+    region: oregon
