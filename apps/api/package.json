@@ -24,6 +24,9 @@
     "mercadopago": "^2.0.6",
     "zod": "^3.23.8"
   },
+  "prisma": {
+    "seed": "tsx src/seed.ts"
+  },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.0",
