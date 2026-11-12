@@ -1,111 +1,156 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native'
-import { useAuth } from '@/contexts/AuthContext'
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
+import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useQuery } from '@tanstack/react-query'
+import type { PhysicalAssessment } from '@academia/shared'
+import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
+import { confirmAction } from '@/lib/dialog'
+import { daysLeft, streakDays, useHistory, useSubscriptions } from '@/lib/data'
+import { Card, Pill, ScreenHeader } from '@/components/ui'
+import { colors, radius } from '@/theme'
+
+const STATUS_LABEL: Record<string, { label: string; tone: 'success' | 'warn' | 'danger' | 'neutral' }> = {
+  ACTIVE: { label: 'Ativa', tone: 'success' },
+  OVERDUE: { label: 'Em atraso', tone: 'danger' },
+  FROZEN: { label: 'Trancada', tone: 'warn' },
+  CANCELLED: { label: 'Cancelada', tone: 'neutral' },
+  INACTIVE: { label: 'Inativa', tone: 'neutral' },
+}
 
 export default function PerfilScreen() {
   const { user, logout } = useAuth()
+  const { data: history = [] } = useHistory()
+  const { data: subscriptions = [] } = useSubscriptions()
 
-  const { data: history = [] } = useQuery({
-    queryKey: ['workout-history'],
-    queryFn: () => api.get('/workouts/my/history').then((r) => r.data),
+  const { data: assessments = [] } = useQuery<PhysicalAssessment[]>({
+    queryKey: ['my-assessments', user?.id],
+    queryFn: () => api.get(`/users/${user?.id}/assessments`).then((r) => r.data),
+    enabled: !!user,
   })
 
-  const handleLogout = () => {
-    Alert.alert('Sair', 'Deseja realmente sair?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair', style: 'destructive', onPress: async () => {
-          await logout()
-          router.replace('/login')
-        }
-      },
-    ])
-  }
+  const now = new Date()
+  const thisMonth = history.filter((h) => {
+    const d = new Date(h.completedAt)
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  }).length
 
-  const totalMinutes = history.reduce((acc: number, log: any) => acc + log.workout.durationMinutes, 0)
+  const last30Days = history.filter((h) => now.getTime() - new Date(h.completedAt).getTime() <= 30 * 86_400_000).length
+
+  const sub = subscriptions.find((x) => x.status === 'ACTIVE') ?? subscriptions[0]
+  const status = sub ? STATUS_LABEL[sub.status] : null
+  const assessment = assessments[0]
+  const bmi = assessment ? assessment.weightKg / (assessment.heightCm / 100) ** 2 : null
+
+  const handleLogout = () =>
+    confirmAction('Sair', 'Deseja realmente sair da sua conta?', 'Sair', async () => {
+      await logout()
+      router.replace('/login')
+    })
 
   return (
-    <ScrollView style={s.container} contentContainerStyle={s.content}>
-      <View style={s.profileHeader}>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
+    <View style={s.container}>
+      <ScreenHeader title="Perfil" />
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.identity}>
+          <View style={s.avatar}>
+            <Text style={s.avatarText}>{user?.name?.charAt(0).toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.name}>{user?.name}</Text>
+            <Text style={s.email}>{user?.email}</Text>
+            {user?.phone ? <Text style={s.email}>{user.phone}</Text> : null}
+          </View>
         </View>
-        <Text style={s.name}>{user?.name}</Text>
-        <Text style={s.email}>{user?.email}</Text>
-        {user?.phone && <Text style={s.phone}>{user.phone}</Text>}
-      </View>
 
-      <View style={s.statsRow}>
-        <View style={s.statBox}>
-          <Text style={s.statValue}>{history.length}</Text>
-          <Text style={s.statLabel}>Treinos</Text>
+        <View style={s.stats}>
+          <View style={s.stat}>
+            <Text style={s.statValue}>{thisMonth}</Text>
+            <Text style={s.statLabel}>treinos no mês</Text>
+          </View>
+          <View style={s.stat}>
+            <Text style={s.statValue}>{streakDays(history)}</Text>
+            <Text style={s.statLabel}>dias seguidos</Text>
+          </View>
+          <View style={s.stat}>
+            <Text style={s.statValue}>{last30Days}</Text>
+            <Text style={s.statLabel}>nos últimos 30 dias</Text>
+          </View>
         </View>
-        <View style={[s.statBox, s.statMiddle]}>
-          <Text style={s.statValue}>{Math.round(totalMinutes / 60)}h</Text>
-          <Text style={s.statLabel}>Total</Text>
-        </View>
-        <View style={s.statBox}>
-          <Text style={s.statValue}>
-            {history.length > 0
-              ? Math.round(totalMinutes / history.length)
-              : 0}min
-          </Text>
-          <Text style={s.statLabel}>Média/treino</Text>
-        </View>
-      </View>
 
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Conta</Text>
-        <TouchableOpacity style={s.menuItem}>
-          <Ionicons name="person-outline" size={20} color="#9ca3af" />
-          <Text style={s.menuText}>Editar Perfil</Text>
-          <Ionicons name="chevron-forward" size={16} color="#4b5563" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-        <TouchableOpacity style={s.menuItem}>
-          <Ionicons name="lock-closed-outline" size={20} color="#9ca3af" />
-          <Text style={s.menuText}>Alterar Senha</Text>
-          <Ionicons name="chevron-forward" size={16} color="#4b5563" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-      </View>
+        <Text style={s.section}>Assinatura</Text>
+        <Card onPress={() => router.push('/assinatura')}>
+          <View style={s.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardTitle}>{sub?.plan ? `Plano ${sub.plan.name}` : 'Sem plano'}</Text>
+              <Text style={s.cardText}>
+                {sub
+                  ? sub.status === 'ACTIVE'
+                    ? `Vence em ${new Date(sub.endDate).toLocaleDateString('pt-BR')} · ${daysLeft(sub.endDate)} dias`
+                    : `Venceu em ${new Date(sub.endDate).toLocaleDateString('pt-BR')}`
+                  : 'Conheça os planos da academia'}
+              </Text>
+            </View>
+            {status ? <Pill label={status.label} tone={status.tone} /> : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
+          </View>
+        </Card>
 
-      <View style={s.section}>
-        <Text style={s.sectionTitle}>Suporte</Text>
-        <TouchableOpacity style={s.menuItem}>
-          <Ionicons name="help-circle-outline" size={20} color="#9ca3af" />
-          <Text style={s.menuText}>Ajuda</Text>
-          <Ionicons name="chevron-forward" size={16} color="#4b5563" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-      </View>
+        <Text style={s.section}>Avaliação física</Text>
+        <Card>
+          {assessment ? (
+            <>
+              <Text style={s.cardText}>Realizada em {new Date(assessment.assessedAt).toLocaleDateString('pt-BR')}</Text>
+              <View style={s.measures}>
+                <Measure label="Peso" value={`${assessment.weightKg} kg`} />
+                <Measure label="Altura" value={`${(assessment.heightCm / 100).toFixed(2).replace('.', ',')} m`} />
+                {bmi ? <Measure label="IMC" value={bmi.toFixed(1).replace('.', ',')} /> : null}
+                {assessment.bodyFatPercent != null ? <Measure label="Gordura" value={`${assessment.bodyFatPercent}%`} /> : null}
+              </View>
+              {assessment.notes ? <Text style={[s.cardText, { marginTop: 12 }]}>{assessment.notes}</Text> : null}
+            </>
+          ) : (
+            <Text style={s.cardText}>Você ainda não tem avaliação registrada. Agende a sua na recepção.</Text>
+          )}
+        </Card>
 
-      <TouchableOpacity style={s.logoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#f87171" />
-        <Text style={s.logoutText}>Sair</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Pressable style={({ pressed }) => [s.logout, pressed && { opacity: 0.7 }]} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <Text style={s.logoutText}>Sair da conta</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
+  )
+}
+
+function Measure({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={s.measure}>
+      <Text style={s.measureValue}>{value}</Text>
+      <Text style={s.measureLabel}>{label}</Text>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
-  content: { padding: 20, paddingBottom: 40 },
-  profileHeader: { alignItems: 'center', marginBottom: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#2563eb', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  avatarText: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
-  name: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  email: { color: '#9ca3af', marginTop: 4 },
-  phone: { color: '#6b7280', fontSize: 13, marginTop: 2 },
-  statsRow: { flexDirection: 'row', backgroundColor: '#1e293b', borderRadius: 16, marginBottom: 24, overflow: 'hidden' },
-  statBox: { flex: 1, padding: 16, alignItems: 'center' },
-  statMiddle: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#374151' },
-  statValue: { color: '#2563eb', fontSize: 22, fontWeight: 'bold' },
-  statLabel: { color: '#9ca3af', fontSize: 12, marginTop: 2 },
-  section: { marginBottom: 20 },
-  sectionTitle: { color: '#6b7280', fontSize: 12, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 6 },
-  menuText: { color: '#e5e7eb', fontSize: 15 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1e293b', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#7f1d1d' },
-  logoutText: { color: '#f87171', fontWeight: '600', fontSize: 15 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { paddingHorizontal: 20, paddingBottom: 32, maxWidth: 560, width: '100%', alignSelf: 'center' },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.ink, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  name: { color: colors.ink, fontSize: 20, fontWeight: '800' },
+  email: { color: colors.muted, fontSize: 14, marginTop: 2 },
+  stats: { flexDirection: 'row', gap: 10 },
+  stat: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: 16, paddingHorizontal: 10, alignItems: 'center' },
+  statValue: { color: colors.accent, fontSize: 26, fontWeight: '800' },
+  statLabel: { color: colors.muted, fontSize: 12, marginTop: 2, textAlign: 'center' },
+  section: { fontSize: 13, fontWeight: '800', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12, marginTop: 24 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  cardText: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 20 },
+  measures: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
+  measure: { backgroundColor: colors.bg, borderRadius: radius.sm, paddingHorizontal: 14, paddingVertical: 10, minWidth: 74 },
+  measureValue: { fontSize: 17, fontWeight: '800', color: colors.ink },
+  measureLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  logout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 28, height: 50, borderRadius: radius.md, backgroundColor: colors.dangerSoft },
+  logoutText: { color: colors.danger, fontWeight: '700', fontSize: 15 },
 })
