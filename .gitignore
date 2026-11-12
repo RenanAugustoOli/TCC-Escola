@@ -8,3 +8,5 @@ dist/
 !*.env.local.example
 prisma/migrations/
 .vercel/
+*.tsbuildinfo
+apps/web/prisma/demo.db
